@@ -5,7 +5,7 @@ const EnvSchema = z.object({
   IMAP_MAIL: z.email(),
   IMAP_MAIL_PASSWORD: z.string().min(1, "IMAP_MAIL_PASSWORD is required"),
   IMAP_MAIL_HOST: z.string().min(1, "IMAP_MAIL_HOST is required"),
-  IMAP_SOURCE_HOST: z.coerce.number().default(993),
+  IMAP_EMAIL_PORT: z.coerce.number().default(993),
 
   // === SMTP EMAIL SERVICE CONFIGURATION ===
   SMTP_MAIL: z.email(),

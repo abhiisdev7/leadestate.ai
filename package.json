@@ -7,7 +7,8 @@
     "jobs": "bun run ./jobs/jobs.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/mailparser": "^3.4.6"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -15,6 +16,7 @@
   "dependencies": {
     "croner": "^10.0.1",
     "imapflow": "^1.2.9",
+    "mailparser": "^3.9.3",
     "mongoose": "^9.2.1",
     "zod": "^4.3.6"
   }

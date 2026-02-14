@@ -9,7 +9,7 @@ export interface IJobConfig {
   updatedAt: string;
 }
 
-type JobHandler = () => void | Promise<void>;
+export type JobHandler = () => void | Promise<void>;
 
 export enum JOBS {
   FOLLOW_UP = "follow_up",

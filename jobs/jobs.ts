@@ -2,7 +2,7 @@ import { Cron } from "croner";
 import { connectDatabase, disconnectDatabase } from "~/configs/db.config.ts";
 import { createLogger } from "~/configs/logger.config.ts";
 import { jobsRepo } from "~/repos/jobs.repo.ts";
-import { JOBS } from "~/types/job.types.ts";
+import { JOBS, type JobHandler } from "~/types/job.types.ts";
 
 import followUpJob from "~/jobs/follow_up.job.ts";
 import inBoundCheckJob from "~/jobs/inbound-check.job.ts";
@@ -11,7 +11,6 @@ import reEngagementJob from "~/jobs/re_engagement.job.ts";
 
 // --- Config ---
 const logger = createLogger("jobs");
-type JobHandler = () => void | Promise<void>;
 
 const JOB_HANDLERS: Record<string, JobHandler> = {
   [JOBS.FOLLOW_UP]: followUpJob,
