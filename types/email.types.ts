@@ -1,5 +1,13 @@
 export type EmailDirection = "inbound" | "outbound";
 
+/** AI classification of inbound emails (per project plan §6) */
+export type EmailClassification =
+  | "buyer_lead"
+  | "seller_lead"
+  | "general_inquiry"
+  | "spam"
+  | "unknown";
+
 export type EmailStatus =
   | "new"       // just received, not yet processed
   | "replied"   // we sent a reply
@@ -26,6 +34,11 @@ export interface IEmail {
   /* Flow */
   direction: EmailDirection;
   status: EmailStatus;
+  classification?: EmailClassification; // for inbound emails
+
+  /* Lead association */
+  contactId?: string;
+  campaignId?: string;
 
   /* Participants */
   from: string;

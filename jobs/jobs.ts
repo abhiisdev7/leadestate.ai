@@ -4,19 +4,14 @@ import { createLogger } from "~/configs/logger.config.ts";
 import { jobsRepo } from "~/repos/jobs.repo.ts";
 import { JOBS, type JobHandler } from "~/types/job.types.ts";
 
-import followUpJob from "~/jobs/follow_up.job.ts";
 import inBoundCheckJob from "~/jobs/inbound-check.job.ts";
-import nurtureJob from "~/jobs/nurture.job.ts";
-import reEngagementJob from "~/jobs/re_engagement.job.ts";
+import outboundCampaignJob from "~/jobs/outbound-campaign.job.ts";
 
-// --- Config ---
 const logger = createLogger("jobs");
 
 const JOB_HANDLERS: Record<string, JobHandler> = {
-  [JOBS.FOLLOW_UP]: followUpJob,
-  [JOBS.NURTURE]: nurtureJob,
-  [JOBS.RE_ENGAGEMENT]: reEngagementJob,
   [JOBS.INBOUND_CHECK]: inBoundCheckJob,
+  [JOBS.OUTBOUND_CAMPAIGN]: outboundCampaignJob,
 };
 
 const activeCrons: Cron[] = [];

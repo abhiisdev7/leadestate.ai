@@ -1,24 +1,141 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { emailsRepo } from "~/repos/emails.repo.ts";
-import { imapConfig } from "~configs/imap.config";
-import { Env } from "~configs/env.config";
-import { createLogger } from "~configs/logger.config";
+import { contactsRepo } from "~/repos/contacts.repo.ts";
+import { propertiesRepo } from "~/repos/properties.repo.ts";
+import { imapConfig } from "~/configs/imap.config.ts";
+import { Env } from "~/configs/env.config.ts";
+import { createLogger } from "~/configs/logger.config.ts";
+import {
+  classifyInboundEmail,
+  extractPropertyDetailsFromMessage,
+  generateLeadResponse,
+  generateSellerLeadResponse,
+} from "~/services/ai.service.ts";
+import { sendReply } from "~/services/email.service.ts";
+import { extractEmail, parseNameAndEmail } from "~/utils/email.utils.ts";
+import type { EmailClassification } from "~/types/email.types.ts";
 
 const logger = createLogger("inbound-check");
 
 function formatAddress(addr: { address?: string; name?: string } | undefined): string {
   if (!addr) return "";
-
   const email = addr.address ?? "";
   const name = addr.name?.trim();
-
   return name ? `${name} <${email}>` : email;
 }
 
 function formatAddressList(addrs: Array<{ address?: string; name?: string }> | undefined): string[] {
   if (!addrs?.length) return [];
   return addrs.map((a) => formatAddress(a)).filter(Boolean);
+}
+
+function getCampaignIdFromHeaders(parsed: { headers?: { get: (k: string) => string | undefined } }): string | undefined {
+  return parsed?.headers?.get("x-campaign");
+}
+
+async function processNewInboundLeads() {
+  const newInbound = await emailsRepo.findNewInbound();
+  let replied = 0;
+  let failed = 0;
+
+  for (const email of newInbound) {
+    const id = String(email._id);
+    try {
+      const classification = await classifyInboundEmail({
+        from: email.from,
+        subject: email.subject,
+        bodyText: email.bodyText,
+      });
+
+      await emailsRepo.updateClassification(id, classification);
+
+      if (classification === "spam") {
+        await emailsRepo.updateStatus(id, "replied");
+        replied++;
+        continue;
+      }
+
+      const { name, email: contactEmail } = parseNameAndEmail(email.from);
+      const intent = classification === "seller_lead" ? "seller" : classification === "buyer_lead" ? "buyer" : "both";
+      const contact = await contactsRepo.upsertByEmail({
+        email: contactEmail,
+        name,
+        intent,
+        source: "email",
+      });
+      await emailsRepo.updateContactId(id, String(contact._id));
+
+      const conversation = await emailsRepo.getConversation(email.conversationId);
+      const exchangeCount = Math.floor(
+        conversation.filter((e) => e.direction === "inbound" || e.status === "replied").length / 2
+      );
+
+      const history = conversation
+        .filter((e) => e.bodyText)
+        .map((e) => ({
+          role: (e.direction === "inbound" ? "user" : "assistant") as "user" | "assistant",
+          content: e.bodyText!,
+        }));
+
+      let replyText: string;
+
+      if (classification === "seller_lead") {
+        const extracted = await extractPropertyDetailsFromMessage({ bodyText: email.bodyText });
+        if (Object.keys(extracted).length > 0) {
+          await propertiesRepo.upsertForContact(String(contact._id), extracted);
+        }
+        const existingProperty = await propertiesRepo.findByContactId(String(contact._id)).then((p) => p[0]);
+        replyText = await generateSellerLeadResponse({
+          from: email.from,
+          subject: email.subject,
+          bodyText: email.bodyText,
+          conversationHistory: history,
+          existingProperty,
+          exchangeCount,
+        });
+      } else {
+        const suggestedProps = await propertiesRepo.findByCriteria({}).then((p) => p.slice(0, 5));
+        replyText = await generateLeadResponse({
+          from: email.from,
+          subject: email.subject,
+          bodyText: email.bodyText,
+          conversationHistory: history,
+          classification,
+          suggestedProperties: suggestedProps.map((p) => ({
+            address: p.address ?? p.city,
+            price: p.price ?? p.priceExpectation,
+            beds: p.beds,
+            baths: p.baths,
+          })),
+          exchangeCount,
+        });
+      }
+
+      await sendReply({
+        to: contactEmail,
+        subject: email.subject ?? "Your inquiry",
+        bodyText: replyText,
+        inReplyTo: email.messageId,
+        references: email.messageId,
+      });
+
+      await emailsRepo.updateStatus(id, "replied");
+      replied++;
+      logger.info("Sent AI reply to lead", { messageId: email.messageId, to: contactEmail, classification });
+    } catch (err) {
+      logger.warn("Failed to reply to lead", {
+        messageId: email.messageId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await emailsRepo.updateStatus(id, "failed");
+      failed++;
+    }
+  }
+
+  if (replied > 0 || failed > 0) {
+    logger.info("Processed new inbound leads", { replied, failed });
+  }
 }
 
 export default async function inBoundCheckJob() {
@@ -65,6 +182,7 @@ export default async function inBoundCheckJob() {
           const isOutbound = fromAddr?.address?.toLowerCase() === ourEmail;
 
           const conversationId = msg.envelope?.inReplyTo ?? messageId;
+          const campaignId = parsed ? getCampaignIdFromHeaders(parsed) : undefined;
 
           await emailsRepo.create({
             conversationId,
@@ -80,6 +198,7 @@ export default async function inBoundCheckJob() {
             subject: msg.envelope?.subject ?? parsed?.subject ?? undefined,
             bodyText: parsed?.text ?? undefined,
             bodyHtml: typeof parsed?.html === "string" ? parsed.html : undefined,
+            ...(campaignId && { campaignId }),
           });
 
           inserted++;
@@ -106,4 +225,6 @@ export default async function inBoundCheckJob() {
   } finally {
     client.close();
   }
+
+  await processNewInboundLeads();
 }

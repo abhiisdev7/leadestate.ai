@@ -1,0 +1,62 @@
+# Project: AI Automated Campaign Real Estate CRM
+
+## Overview
+
+Build an AI-powered real estate CRM focused on email campaigns. The system handles both outbound campaigns and inbound leads, with AI-generated responses in the loop.
+
+---
+
+## Flow
+
+### 1. Contacts in CRM
+
+- We maintain a set of contacts in the CRM.
+- We send campaigns to selected contacts, OR contacts reach us first via email.
+
+### 2. Outbound Campaigns
+
+- When we send a campaign to selected contacts, we add a custom header to each email.
+- Example: `X-Campaign: 1111`
+- This header lets us identify our own sent emails when reading them back via IMAP.
+- We read these emails and insert them into the database.
+
+### 3. Inbound Lead Handling
+
+- An inbound job runs every minute to check for new emails.
+- If we receive a lead (inbound email), we automatically send an AI-generated response based on the customer's message.
+
+### 4. Conversation Loop
+
+- The flow continues: the customer may reply asking for available properties, etc.
+- We have properties in our CRM and can send them.
+- The customer may reply again—the conversation continues.
+- After 4–5 exchanges, we ask to schedule a call—if the customer is still engaged.
+- (We may schedule a call earlier if the customer's replies indicate readiness.)
+
+### 5. AI in the Loop
+
+- AI generates contextual responses throughout the conversation.
+- The system handles qualification, property suggestions, and call scheduling.
+
+---
+
+## 6. AI Handling of Inbound Emails
+- We also receive inbound emails from customers who are interested in selling their properties (for example, those requesting information about listing a property).
+- The system must classify each inbound email (buyer lead, seller lead, general inquiry, spam, etc.).
+- Email threads should be organized and saved correctly, associating all messages within a conversation for each lead.
+
+## Tech Stack
+
+- **Runtime:** Bun
+- **Database:** MongoDB
+- **Backend:** Express
+- **Frontend:** React
+- **Language:** TypeScript
+- **AI-SDK:** Use Vercel AI SDK (openai models)
+
+---
+
+## Build Order
+
+First, build all jobs and models needed for this system.
+o

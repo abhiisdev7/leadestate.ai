@@ -9,6 +9,7 @@ export interface Logger {
 
 function formatTimestamp(): string {
   return new Date().toISOString();
+  
 }
 
 function formatMessage(

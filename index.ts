@@ -1,1 +1,6 @@
-console.log("Hello via Bun!");
+import { startServer } from "~/routes/server.ts";
+
+startServer().catch((err) => {
+  console.error("Failed to start server", err);
+  process.exit(1);
+});

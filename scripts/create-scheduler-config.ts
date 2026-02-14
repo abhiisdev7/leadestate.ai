@@ -5,41 +5,27 @@ import { Job } from "~models/job.model";
 
 /**
  * Scheduler configs for the AI Real Estate Agent (Track 2)
- * - follow_up: Daily follow-ups for hot leads
- * - nurture: Nurture sequences for leads in pipeline
- * - re_engagement: Re-engagement campaigns for cold/stale leads
- * - inbound_check: Fast response to new inbound inquiries
+ * - inbound_check: Runs every minute to check for new emails and send AI-generated responses to leads
  */
 const JOBS_CONFIGS = [
-  {
-    name: "follow_up",
-    corn: "* * * * *",
-    enabled: false,
-  },
-  {
-    name: "nurture",
-    corn: "* * * * *",
-    enabled: false,
-  },
-  {
-    name: "re_engagement",
-    corn: "* * * * *",
-    enabled: false,
-  },
-  {
-    name: "inbound_check",
-    corn: "* * * * *",
-    enabled: false,
-  },
+  { name: "inbound_check", corn: "* * * * *", enabled: true },
+  { name: "outbound_campaign", corn: "*/5 * * * *", enabled: true },
 ] as const;
 
 const logger = createLogger("create-scheduler-config");
 
 async function createJobsConfigs() {
   await mongoose.connect(Env.DATABASE_URL);
-  await Job.insertMany(JOBS_CONFIGS);
 
-  logger.info("Created scheduler configs");
+  for (const config of JOBS_CONFIGS) {
+    await Job.findOneAndUpdate(
+      { name: config.name },
+      { $set: { corn: config.corn, enabled: config.enabled } },
+      { upsert: true }
+    );
+  }
+
+  logger.info("Created/updated scheduler configs");
   await mongoose.disconnect();
 }
 

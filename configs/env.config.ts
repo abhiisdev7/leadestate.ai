@@ -19,6 +19,8 @@ const EnvSchema = z.object({
   // === DATABASE CONFIGURATION ===
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   DATABASE_NAME: z.string().min(1, "DATABASE_NAME is required"),
+
+  PORT: z.coerce.number().default(3000),
 });
 
 export const Env = EnvSchema.parse(process.env);

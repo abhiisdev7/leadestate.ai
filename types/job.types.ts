@@ -12,8 +12,6 @@ export interface IJobConfig {
 export type JobHandler = () => void | Promise<void>;
 
 export enum JOBS {
-  FOLLOW_UP = "follow_up",
-  NURTURE = "nurture",
-  RE_ENGAGEMENT = "re_engagement",
-  INBOUND_CHECK = "inbound_check"
+  INBOUND_CHECK = "inbound_check",
+  OUTBOUND_CAMPAIGN = "outbound_campaign",
 }

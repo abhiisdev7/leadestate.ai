@@ -23,6 +23,13 @@ const EmailSchema = new mongoose.Schema<IEmail>(
       default: "new",
       index: true,
     },
+    classification: {
+      type: String,
+      enum: ["buyer_lead", "seller_lead", "general_inquiry", "spam", "unknown"],
+      index: true,
+    },
+    contactId: { type: mongoose.Schema.Types.ObjectId, ref: "contacts", index: true },
+    campaignId: { type: String, index: true },
 
     from: { type: String, required: true },
     to: [{ type: String }],
