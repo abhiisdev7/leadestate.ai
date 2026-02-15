@@ -2,11 +2,5 @@
   "functions": {
     "app/api/chat/route.ts": { "maxDuration": 30 },
     "app/api/cron/email-observer/route.ts": { "maxDuration": 60 }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/email-observer",
-      "schedule": "*/10 * * * *"
-    }
-  ]
+  }
 }
