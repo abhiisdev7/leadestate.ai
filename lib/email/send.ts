@@ -1,17 +1,4 @@
-import nodemailer from "nodemailer";
-
-function getTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_MAIL_HOST ?? "smtp.gmail.com",
-    port: Number(process.env.SMTP_MAIL_PORT) || 587,
-    secure: false,
-    requireTLS: true,
-    auth: {
-      user: process.env.SMTP_MAIL,
-      pass: process.env.SMTP_MAIL_PASSWORD,
-    },
-  });
-}
+import { getTransporter } from "./transporter";
 
 export interface MeetingEmailParams {
   to: string;
