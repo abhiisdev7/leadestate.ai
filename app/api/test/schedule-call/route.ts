@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectDB, Lead } from "@/lib/db";
+import { connectDB, Contact, Lead, Schedule } from "@/lib/db";
 import { sendMeetingSchedulerEmail } from "@/lib/email/send";
 
 /**
@@ -56,12 +56,33 @@ export async function POST(req: Request) {
 
     if (sendEmail && email) {
       try {
+        const contact = await Contact.create({
+          name,
+          phone,
+          email,
+          source: "inbound",
+        });
+        const schedule = await Schedule.create({
+          contact: contact._id,
+          lead: lead._id,
+          date,
+          time,
+          status: "confirmed",
+          purpose,
+          channel: "inbound",
+        });
         await sendMeetingSchedulerEmail({
           to: email,
           leadName: name,
           date,
           time,
           purpose,
+          scheduleId: schedule._id.toString(),
+        });
+        await Schedule.findByIdAndUpdate(schedule._id, {
+          $set: {
+            confirmationEmailMessageId: `<schedule-${schedule._id}@leadestate.local>`,
+          },
         });
       } catch (err) {
         console.error("Test email failed:", err);

@@ -46,7 +46,7 @@ export async function PATCH(
     const property = await Property.findByIdAndUpdate(
       id,
       { $set: { status } },
-      { new: true }
+      { returnDocument: "after" }
     ).lean();
 
     if (!property) {

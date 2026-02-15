@@ -8,6 +8,7 @@ export interface ISchedule extends Document {
   status: "confirmed" | "proposed" | "cancelled";
   purpose?: string;
   channel?: "inbound" | "outbound";
+  confirmationEmailMessageId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +26,7 @@ const ScheduleSchema = new Schema<ISchedule>(
     },
     purpose: String,
     channel: { type: String, enum: ["inbound", "outbound"] },
+    confirmationEmailMessageId: String,
   },
   { timestamps: true }
 );

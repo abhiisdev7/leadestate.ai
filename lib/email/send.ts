@@ -1,15 +1,17 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_MAIL_HOST ?? "smtp.gmail.com",
-  port: Number(process.env.SMTP_MAIL_PORT) || 587,
-  secure: false,
-  requireTLS: true,
-  auth: {
-    user: process.env.SMTP_MAIL,
-    pass: process.env.SMTP_MAIL_PASSWORD,
-  },
-});
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_MAIL_HOST ?? "smtp.gmail.com",
+    port: Number(process.env.SMTP_MAIL_PORT) || 587,
+    secure: false,
+    requireTLS: true,
+    auth: {
+      user: process.env.SMTP_MAIL,
+      pass: process.env.SMTP_MAIL_PASSWORD,
+    },
+  });
+}
 
 export interface MeetingEmailParams {
   to: string;
@@ -17,13 +19,16 @@ export interface MeetingEmailParams {
   date: string;
   time: string;
   purpose?: string;
+  scheduleId: string;
 }
 
 export async function sendMeetingSchedulerEmail(params: MeetingEmailParams): Promise<void> {
-  const { to, leadName, date, time, purpose = "Discovery call" } = params;
+  const { to, leadName, date, time, purpose = "Discovery call", scheduleId } = params;
 
   if (!process.env.SMTP_MAIL || !process.env.SMTP_MAIL_PASSWORD) {
-    console.warn("SMTP not configured, skipping meeting email");
+    console.warn(
+      "SMTP not configured: SMTP_MAIL and SMTP_MAIL_PASSWORD must be set in env. Skipping meeting email."
+    );
     return;
   }
 
@@ -79,10 +84,13 @@ export async function sendMeetingSchedulerEmail(params: MeetingEmailParams): Pro
 </html>
   `.trim();
 
-  await transporter.sendMail({
+  const messageId = `<schedule-${scheduleId}@leadestate.local>`;
+
+  await getTransporter().sendMail({
     from: `"Leadestate" <${process.env.SMTP_MAIL}>`,
     to,
     subject: `Your call is scheduled – ${date} at ${time}`,
     html,
+    messageId,
   });
 }

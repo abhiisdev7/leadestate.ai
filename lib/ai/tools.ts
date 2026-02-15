@@ -33,7 +33,7 @@ export function createTools(leadId: string | null) {
           lead = await Lead.findByIdAndUpdate(
             leadId,
             { $set: update },
-            { new: true }
+            { returnDocument: "after" }
           );
         } else {
           lead = await Lead.create({ ...update, status: "new" } as Record<string, unknown>);
@@ -74,7 +74,7 @@ export function createTools(leadId: string | null) {
 
         let lead;
         if (leadId) {
-          lead = await Lead.findByIdAndUpdate(leadId, { $set: update }, { new: true });
+          lead = await Lead.findByIdAndUpdate(leadId, { $set: update }, { returnDocument: "after" });
         } else {
           lead = await Lead.create(update as Record<string, unknown>);
         }
@@ -299,14 +299,14 @@ export function createTools(leadId: string | null) {
 
         let lead;
         if (leadId) {
-          lead = await Lead.findByIdAndUpdate(leadId, { $set: baseSet }, { new: true });
+          lead = await Lead.findByIdAndUpdate(leadId, { $set: baseSet }, { returnDocument: "after" });
         } else {
           lead = await Lead.create(baseSet as Record<string, unknown>);
         }
 
         if (!lead) return { success: false, message: "Failed to save lead", closeChat: false };
 
-        await Schedule.create({
+        const schedule = await Schedule.create({
           contact: contact._id,
           lead: lead._id,
           date: input.date,
@@ -337,10 +337,18 @@ export function createTools(leadId: string | null) {
               date: input.date,
               time: input.time,
               purpose: input.purpose ?? "Discovery call",
+              scheduleId: schedule._id.toString(),
+            });
+            await Schedule.findByIdAndUpdate(schedule._id, {
+              $set: {
+                confirmationEmailMessageId: `<schedule-${schedule._id}@leadestate.local>`,
+              },
             });
             emailSent = true;
           } catch (err) {
-            console.error("Meeting email failed:", err);
+            const msg = err instanceof Error ? err.message : String(err);
+            const code = err && typeof err === "object" && "code" in err ? (err as { code?: string }).code : "";
+            console.error("Meeting email failed:", msg, code ? `[${code}]` : "");
           }
         }
 
