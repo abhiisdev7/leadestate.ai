@@ -1,9 +1,15 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.DATABASE_URL!;
+const MONGODB_URI =
+  process.env.DATABASE_URL ??
+  (process.env.DB_USERNAME && process.env.DB_PASSWORD && process.env.DATABASE_NAME
+    ? `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.vtp9f.mongodb.net/${process.env.DATABASE_NAME}?retryWrites=true&w=majority&appName=Cluster0`
+    : undefined);
 
 if (!MONGODB_URI) {
-  throw new Error("DATABASE_URL is not defined");
+  throw new Error(
+    "DATABASE_URL or (DB_USERNAME, DB_PASSWORD, DATABASE_NAME) must be defined"
+  );
 }
 
 interface MongooseCache {

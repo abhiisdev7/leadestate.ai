@@ -13,6 +13,7 @@
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.60 0.10 185);
   --primary-foreground: oklch(0.98 0.01 181);
+  --primary-50: oklch(0.98 0.02 185);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.97 0 0);
@@ -48,6 +49,7 @@
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.70 0.12 183);
   --primary-foreground: oklch(0.28 0.04 193);
+  --primary-50: oklch(0.18 0.03 185);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -101,6 +103,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-50: var(--primary-50);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -136,5 +139,57 @@
   h5,
   h6 {
     font-family: var(--font-funnel-display), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .animate-spin-slow {
+    animation: spin-slow 2s linear infinite;
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .scrollbar-thumb-only {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.7 0 0 / 0.4) transparent;
+  }
+
+  .scrollbar-thumb-only::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thumb-only::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thumb-only::-webkit-scrollbar-thumb {
+    background: oklch(0.7 0 0 / 0.4);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thumb-only * {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.7 0 0 / 0.4) transparent;
+  }
+
+  .scrollbar-thumb-only *::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thumb-only *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thumb-only *::-webkit-scrollbar-thumb {
+    background: oklch(0.7 0 0 / 0.4);
+    border-radius: 3px;
   }
 }

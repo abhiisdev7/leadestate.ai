@@ -14,6 +14,7 @@ export interface LeadMemory {
 }
 
 export interface ILead extends Document {
+  contact?: mongoose.Types.ObjectId;
   name?: string;
   phone?: string;
   email?: string;
@@ -64,6 +65,7 @@ const LeadMemorySchema = new Schema<LeadMemory>(
 
 const LeadSchema = new Schema<ILead>(
   {
+    contact: { type: Schema.Types.ObjectId, ref: "Contact" },
     name: String,
     phone: String,
     email: String,

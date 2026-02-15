@@ -15,12 +15,13 @@ import { Message, MessageContent, MessageResponse } from "@/components/ai-elemen
 import { useSpeechSynthesis } from "@/lib/speech/useSpeechSynthesis";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { HomeIcon, SendIcon, BotIcon, SparklesIcon } from "lucide-react";
+import { HomeIcon, SendIcon, BotIcon, SparklesIcon, Volume2Icon } from "lucide-react";
 
 const LEAD_ID_KEY = "leadestate_lead_id";
+const VOICE_READING_KEY = "leadestate_voice_reading";
 
 function getTextFromMessage(message: { parts?: Array<{ type?: string; text?: string }> }): string {
   if (!message.parts) return "";
@@ -74,6 +75,17 @@ export default function VoiceChatPage() {
 
   const [textInput, setTextInput] = useState("");
   const [callScheduled, setCallScheduled] = useState(false);
+  const [voiceReading, setVoiceReading] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(VOICE_READING_KEY);
+    if (stored !== null) setVoiceReading(stored !== "false");
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(VOICE_READING_KEY, String(voiceReading));
+    if (!voiceReading) stop();
+  }, [voiceReading, stop]);
 
   const sendTextMessage = useCallback(
     (text: string) => {
@@ -104,6 +116,7 @@ export default function VoiceChatPage() {
   }, [messages, setMessages]);
 
   useEffect(() => {
+    if (!voiceReading) return;
     const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
     if (!lastAssistant || status !== "ready") return;
 
@@ -112,7 +125,7 @@ export default function VoiceChatPage() {
       lastAssistantMessageRef.current = text;
       speak(text);
     }
-  }, [messages, status, speak]);
+  }, [messages, status, speak, voiceReading]);
 
   const handleStop = useCallback(() => {
     stop();
@@ -148,14 +161,11 @@ export default function VoiceChatPage() {
           <div className="text-center space-y-2">
             <h2 className="font-semibold text-lg">Call scheduled</h2>
             <p className="text-muted-foreground text-sm max-w-sm">
-              Your call has been booked. A confirmation email has been sent. You can view the details in the CRM dashboard.
+              Your call has been booked. A confirmation email has been sent.
             </p>
           </div>
           <Button onClick={startNewChat} size="lg">
             Start new chat
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/crm">View CRM</Link>
           </Button>
         </main>
       </div>
@@ -164,7 +174,7 @@ export default function VoiceChatPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      <header className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+      <header className="flex shrink-0 items-center justify-between border-b bg-primary-50 px-4 py-3">
         <div className="flex items-center gap-3">
           <Avatar className="size-9 rounded-lg">
             <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
@@ -176,10 +186,20 @@ export default function VoiceChatPage() {
             <p className="text-muted-foreground text-xs">Real estate assistant</p>
           </div>
         </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <Volume2Icon className="size-4 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Read aloud</span>
+          <Switch
+            checked={voiceReading}
+            onCheckedChange={setVoiceReading}
+            size="sm"
+            aria-label="Toggle voice reading of messages"
+          />
+        </label>
       </header>
 
       <main className="flex flex-1 flex-col min-h-0 overflow-hidden">
-        <Conversation className="flex-1 min-h-0">
+        <Conversation className="scrollbar-thumb-only flex-1 min-h-0">
           <ConversationContent className="gap-6 px-4 py-5">
             {messages.length === 0 ? (
               <ConversationEmptyState
@@ -247,7 +267,7 @@ export default function VoiceChatPage() {
               ))}
             </Suggestions>
           )}
-          <div className="rounded-2xl border bg-background shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
+          <div className="overflow-hidden rounded-2xl border bg-background shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
             <Textarea
               placeholder="Ask anything about your real estate needs..."
               value={textInput}
@@ -262,7 +282,7 @@ export default function VoiceChatPage() {
               rows={2}
               className="min-h-[72px] resize-none border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-t-2xl rounded-b-none px-4 py-3"
             />
-            <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+            <div className="flex items-center justify-between gap-2 rounded-b-2xl border-t px-3 py-2">
               <div className="flex items-center gap-2">
                 <SpeechInput
                   onTranscriptionChange={handleTranscription}

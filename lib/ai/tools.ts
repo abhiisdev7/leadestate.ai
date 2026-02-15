@@ -1,13 +1,15 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { connectDB, Lead, Property } from "@/lib/db";
+import { connectDB, Contact, Lead, Property, Schedule } from "@/lib/db";
+import { getAvailableSlots } from "@/lib/db/availability";
+import { buildPropertyQuery } from "@/lib/db/property-search";
 import { sendMeetingSchedulerEmail } from "@/lib/email/send";
 
 export function createTools(leadId: string | null) {
   return {
     update_lead: tool({
       description:
-        "Create or update a lead in the CRM. Use when the user shares their name, phone, email, or other contact info.",
+        "Create or update a lead in the CRM. Use when the user shares their name, phone, email, budget, location, timeline, intent, or readiness. Call frequently to keep lead data up to date.",
       inputSchema: z.object({
         name: z.string().optional(),
         phone: z.string().optional(),
@@ -16,6 +18,9 @@ export function createTools(leadId: string | null) {
         budget: z.number().optional(),
         location: z.string().optional(),
         timeline: z.string().optional(),
+        intent: z.enum(["buy", "sell", "both", "unknown"]).optional(),
+        urgency: z.enum(["high", "medium", "low"]).optional(),
+        readiness_score: z.number().min(0).max(10).optional(),
       }),
       execute: async (input) => {
         await connectDB();
@@ -82,35 +87,34 @@ export function createTools(leadId: string | null) {
 
     suggest_properties: tool({
       description:
-        "Find matching properties from our inventory for a lead. Call after qualifying when you have budget and location. Returns matching listings.",
+        "Find matching properties from our inventory for a lead. Call after qualifying when you have budget and/or location. Supports formats like 'Austin', 'Austin TX', 'Austin, Texas'. Returns matching listings with IDs for linking.",
       inputSchema: z.object({
-        budget_max: z.number().optional(),
-        location: z.string().optional(),
+        budget_max: z.number().optional().describe("Maximum price in dollars"),
+        budget_min: z.number().optional().describe("Minimum price in dollars"),
+        location: z.string().optional().describe("City, state, or area e.g. Austin, Austin TX, Texas"),
+        beds_min: z.number().optional().describe("Minimum bedrooms"),
+        baths_min: z.number().optional().describe("Minimum bathrooms"),
         limit: z.number().min(1).max(5).optional(),
       }),
       execute: async (input) => {
         await connectDB();
-        const conditions: Record<string, unknown>[] = [
-          { $or: [{ status: { $exists: false } }, { status: "active" }] },
-        ];
-        if (input.budget_max) conditions.push({ price: { $lte: input.budget_max } });
-        if (input.location) {
-          conditions.push({
-            $or: [
-              { city: new RegExp(input.location, "i") },
-              { state: new RegExp(input.location, "i") },
-            ],
-          });
-        }
-        const query = conditions.length > 1 ? { $and: conditions } : conditions[0];
+        const query = buildPropertyQuery({
+          budget_max: input.budget_max,
+          budget_min: input.budget_min,
+          location: input.location,
+          beds_min: input.beds_min,
+          baths_min: input.baths_min,
+        });
         const limit = input.limit ?? 3;
-        const properties = await Property.find(query).limit(limit).lean() as Array<{
+        const properties = await Property.find(query).sort({ price: 1 }).limit(limit).lean() as Array<{
           _id: unknown;
           address: string;
           city: string;
+          state: string;
           price: number;
           beds: number;
           baths: number;
+          sqft?: number;
           features?: string[];
         }>;
 
@@ -122,12 +126,16 @@ export function createTools(leadId: string | null) {
 
         return {
           success: true,
+          count: properties.length,
           properties: properties.map((p) => ({
+            id: String(p._id),
             address: p.address,
             city: p.city,
+            state: p.state,
             price: p.price,
             beds: p.beds,
             baths: p.baths,
+            sqft: p.sqft,
             features: p.features,
           })),
         };
@@ -174,70 +182,56 @@ export function createTools(leadId: string | null) {
       },
     }),
 
-    propose_appointment: tool({
-      description: "Propose appointment slots to the lead. Call when the user wants to schedule a call.",
+    get_available_slots: tool({
+      description:
+        "Get available appointment slots. Call when the user wants to schedule a call. Returns ONLY slots that are not already booked. Use these slots when proposing times.",
       inputSchema: z.object({
-        slots: z.array(
-          z.object({
-            date: z.string().describe("Date in YYYY-MM-DD format"),
-            time: z.string().describe("Time e.g. 2:00 PM"),
-          })
-        ),
+        limit: z.number().min(1).max(6).optional().describe("Max slots to return (default 6)"),
       }),
       execute: async (input) => {
         await connectDB();
-        const appointments = input.slots.map((s) => ({
-          date: s.date,
-          time: s.time,
-          confirmed: false,
-        }));
-
-        if (leadId) {
-          await Lead.findByIdAndUpdate(leadId, {
-            $set: { appointments, next_action: `Proposed: ${input.slots[0].date} at ${input.slots[0].time}` },
-          });
-        }
-
+        const slots = await getAvailableSlots(input.limit ?? 6);
         return {
           success: true,
-          slots: input.slots,
-          message: `Proposed ${input.slots.length} slot(s)`,
+          slots,
+          message: `Found ${slots.length} available slot(s). Propose these to the user.`,
         };
       },
     }),
 
-    confirm_appointment: tool({
-      description: "Confirm an appointment slot. Call when the user agrees to a proposed slot.",
+    propose_appointment: tool({
+      description:
+        "Propose appointment slots. MUST use slots from get_available_slots to ensure they are available. Call when the user wants to schedule – first call get_available_slots, then propose 2-3 of those slots to the user.",
       inputSchema: z.object({
-        slot_index: z.number().describe("Index of the slot (0-based)"),
+        slots: z
+          .array(
+            z.object({
+              date: z.string().describe("Date in YYYY-MM-DD format"),
+              time: z.string().describe("Time e.g. 2:00 PM"),
+            })
+          )
+          .min(1)
+          .max(3)
+          .describe("Slots from get_available_slots – only propose available slots"),
       }),
       execute: async (input) => {
-        if (!leadId) return { success: false, message: "No lead" };
         await connectDB();
-
-        const lead = await Lead.findById(leadId);
-        if (!lead?.appointments?.length) return { success: false, message: "No appointments" };
-
-        const idx = input.slot_index;
-        if (idx < 0 || idx >= lead.appointments.length) {
-          return { success: false, message: "Invalid slot index" };
+        if (leadId) {
+          await Lead.findByIdAndUpdate(leadId, {
+            $set: { next_action: `Proposed: ${input.slots[0].date} at ${input.slots[0].time}` },
+          });
         }
-
-        lead.appointments[idx].confirmed = true;
-        const slot = lead.appointments[idx];
-        lead.next_action = `Call scheduled – ${slot.date} at ${slot.time}`;
-        await lead.save();
-
         return {
           success: true,
-          message: `Confirmed: ${slot.date} at ${slot.time}`,
+          slots: input.slots,
+          message: `Proposed ${input.slots.length} available slot(s)`,
         };
       },
     }),
 
     schedule_call: tool({
       description:
-        "Schedule a call and finalize the booking. Call ONLY when the user has confirmed a date/time AND you have their name, phone, AND email. Email is REQUIRED before scheduling. For inbound leads (voice chat), this creates the lead, stores the appointment, sends a meeting confirmation email, and closes the chat.",
+        "Schedule a call and finalize the booking. Call ONLY when the user has confirmed a date/time AND you have their name, phone, AND email. Use a slot from get_available_slots. Creates Contact, Lead, and Schedule records. Email is REQUIRED.",
       inputSchema: z.object({
         name: z.string().describe("Lead's full name"),
         phone: z.string().describe("Lead's phone number"),
@@ -246,64 +240,106 @@ export function createTools(leadId: string | null) {
         time: z.string().describe("Time e.g. 2:00 PM"),
         purpose: z.string().optional().describe("Purpose of the call e.g. Discovery call, Property tour"),
         channel: z.enum(["inbound", "outbound"]).optional().default("inbound"),
+        budget: z.number().optional().describe("Lead's budget in dollars if known"),
+        location: z.string().optional().describe("Lead's preferred location/area if known"),
+        timeline: z.string().optional().describe("Lead's timeline e.g. within 1 week, 2-3 months"),
+        readiness_score: z.number().min(0).max(10).optional().describe("Lead readiness 0-10 if known"),
+        intent: z.enum(["buy", "sell", "both", "unknown"]).optional(),
       }),
       execute: async (input) => {
         await connectDB();
 
-        const appointment = {
-          date: input.date,
-          time: input.time,
-          confirmed: true,
-          channel: input.channel as "inbound" | "outbound",
-          purpose: input.purpose ?? "Discovery call",
-        };
+        let contact = await Contact.findOne({
+          $or: [{ email: input.email }, ...(input.phone ? [{ phone: input.phone }] : [])],
+        });
 
-        let lead;
-        if (leadId) {
-          lead = await Lead.findByIdAndUpdate(
-            leadId,
-            {
-              $set: {
-                name: input.name,
-                phone: input.phone,
-                email: input.email,
-                channel: input.channel,
-                status: "qualified",
-                next_action: `Call scheduled – ${input.date} at ${input.time}`,
-              },
-              $push: { appointments: appointment },
-            },
-            { new: true }
-          );
-        } else {
-          lead = await Lead.create({
+        if (!contact) {
+          contact = await Contact.create({
             name: input.name,
             phone: input.phone,
             email: input.email,
-            channel: input.channel,
-            status: "qualified",
-            next_action: `Call scheduled – ${input.date} at ${input.time}`,
-            appointments: [appointment],
-          } as Record<string, unknown>);
+            source: input.channel,
+          });
+        } else {
+          await Contact.findByIdAndUpdate(contact._id, {
+            $set: {
+              name: input.name,
+              phone: input.phone,
+              email: input.email,
+            },
+          });
+        }
+
+        const baseSet: Record<string, unknown> = {
+          contact: contact._id,
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          channel: input.channel,
+          status: "qualified",
+          next_action: `Call scheduled – ${input.date} at ${input.time}`,
+        };
+        if (input.budget != null) baseSet.budget = input.budget;
+        if (input.location != null) baseSet.location = input.location;
+        if (input.timeline != null) baseSet.timeline = input.timeline;
+        if (input.readiness_score != null) baseSet.readiness_score = input.readiness_score;
+        if (input.intent != null) baseSet.intent = input.intent;
+
+        let lead;
+        if (leadId) {
+          lead = await Lead.findByIdAndUpdate(leadId, { $set: baseSet }, { new: true });
+        } else {
+          lead = await Lead.create(baseSet as Record<string, unknown>);
         }
 
         if (!lead) return { success: false, message: "Failed to save lead", closeChat: false };
 
+        await Schedule.create({
+          contact: contact._id,
+          lead: lead._id,
+          date: input.date,
+          time: input.time,
+          status: "confirmed",
+          purpose: input.purpose ?? "Discovery call",
+          channel: input.channel,
+        });
+
+        await Lead.findByIdAndUpdate(lead._id, {
+          $push: {
+            appointments: {
+              date: input.date,
+              time: input.time,
+              confirmed: true,
+              channel: input.channel,
+              purpose: input.purpose ?? "Discovery call",
+            },
+          },
+        });
+
+        let emailSent = false;
         if (input.channel === "inbound" && input.email) {
-          sendMeetingSchedulerEmail({
-            to: input.email,
-            leadName: input.name,
-            date: input.date,
-            time: input.time,
-            purpose: input.purpose ?? "Discovery call",
-          }).catch((err) => console.error("Meeting email failed:", err));
+          try {
+            await sendMeetingSchedulerEmail({
+              to: input.email,
+              leadName: input.name,
+              date: input.date,
+              time: input.time,
+              purpose: input.purpose ?? "Discovery call",
+            });
+            emailSent = true;
+          } catch (err) {
+            console.error("Meeting email failed:", err);
+          }
         }
 
         return {
           success: true,
-          message: `Call scheduled for ${input.date} at ${input.time}. A confirmation email has been sent to ${input.email}.`,
+          message: emailSent
+            ? `Call scheduled for ${input.date} at ${input.time}. A confirmation email has been sent to ${input.email}.`
+            : `Call scheduled for ${input.date} at ${input.time}.${!emailSent && input.channel === "inbound" ? " (Email could not be sent – please check SMTP config.)" : ""}`,
           closeChat: true,
           lead_id: lead._id.toString(),
+          contact_id: contact._id.toString(),
         };
       },
     }),

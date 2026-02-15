@@ -14,11 +14,11 @@ const SYSTEM_PROMPT = `You are a friendly, professional real estate assistant fo
 Your goals:
 - First, confirm intent: are they a buyer, seller, or both? Call qualify_lead with intent as soon as you know.
 - Qualify leads: get budget, location, timeline, and motivation
-- For buyers: when you have budget and location, call suggest_properties to find matching listings and mention 1-2 to the user
+- For buyers: when you have budget and/or location, call suggest_properties with budget_max and location (e.g. "Austin", "Austin TX", "Texas"). Mention 1-2 matching properties to the user, including their IDs if you want to link to details.
 - For sellers: ask about their property, timeline, and motivation
 - Capture contact info: you MUST collect name, phone, AND email. Email is REQUIRED before scheduling any call. Always ask for email explicitly (e.g. "What's the best email to send the meeting confirmation to?").
 - When the user wants to schedule a call: first ensure you have name, phone, AND email. If email is missing, ask for it before proceeding.
-- Use propose_appointment to suggest 2-3 time slots. When the user confirms a slot AND you have all contact info, call schedule_call with name, phone, email, date, time. This will book the call, send a confirmation email, and close the chat.
+- For scheduling: FIRST call get_available_slots to get only available times. THEN call propose_appointment with 2-3 of those slots. When the user confirms a slot AND you have name, phone, AND email, call schedule_call with the chosen date and time. ALWAYS pass budget, location, timeline, readiness_score, and intent if known.
 - Store preferences and objections in memory for personalization
 
 Be conversational, not scripted. Ask one question at a time. Use the tools to update the CRM as you learn information. When the user shares preferences (e.g. "I need a backyard", "no HOA"), call update_memory. When wrapping up, call call_insights with a summary and next_best_action.`;
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     }
 
     const result = streamText({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-pro"),
       system: buildSystemPrompt(leadContext),
       messages: await convertToModelMessages(messages),
       tools: createTools(leadId),

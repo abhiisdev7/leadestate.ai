@@ -15,8 +15,21 @@ import { ProgressCircle } from "@/components/ui/progress-circle";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
   ChevronRightIcon,
-  MicIcon,
   HomeIcon,
   CalendarIcon,
   PhoneIcon,
@@ -25,8 +38,10 @@ import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
   SearchIcon,
+  UsersIcon,
+  BarChart3Icon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTimeParts } from "@/lib/utils";
 
 interface Property {
   _id: string;
@@ -214,7 +229,7 @@ function LeadRow({
                       {lead.appointments.map((apt, i) => (
                         <p key={i} className="flex items-center gap-2">
                           <CalendarIcon className="size-3.5" />
-                          {apt.date} at {apt.time}
+                          {formatDateTimeParts(apt.date, apt.time)}
                           {apt.confirmed && (
                             <Badge variant="outline" className="text-xs capitalize">
                               Confirmed
@@ -305,10 +320,49 @@ function LeadRow({
   );
 }
 
+type ChartRange = "week" | "monthly" | "yearly";
+
+const CHART_CONFIG = {
+  meetings: {
+    label: "Scheduled Meetings",
+    color: "#22c55e",
+  },
+  leads: {
+    label: "Leads",
+    color: "#3b82f6",
+  },
+} satisfies ChartConfig;
+
 export default function CRMPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
+  const [chartRange, setChartRange] = useState<ChartRange>("week");
+  const [chartData, setChartData] = useState<
+    Array<{ date: string; label: string; leads: number; meetings: number }>
+  >([]);
+  const [chartDateRange, setChartDateRange] = useState<string>("");
+  const [chartLoading, setChartLoading] = useState(true);
+
+  const fetchChartData = useCallback(async () => {
+    setChartLoading(true);
+    try {
+      const res = await fetch(`/api/crm/stats?range=${chartRange}`);
+      if (res.ok) {
+        const { chartData: data, dateRangeLabel } = await res.json();
+        setChartData(data ?? []);
+        setChartDateRange(dateRangeLabel ?? "");
+      }
+    } catch (err) {
+      console.error("Chart fetch error:", err);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [chartRange]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -331,6 +385,10 @@ export default function CRMPage() {
     const interval = setInterval(fetchLeads, 3000);
     return () => clearInterval(interval);
   }, [fetchLeads]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [channelFilter, setChannelFilter] = useState<"all" | "inbound" | "outbound">("all");
@@ -378,14 +436,23 @@ export default function CRMPage() {
     time: string;
     type: string;
     channel: "inbound" | "outbound";
+
     purpose?: string;
     confirmed: boolean;
   }> = allMeetingsSorted.slice(0, 6);
+  const leadById = useMemo(() => new Map(leads.map((l) => [l._id, l])), [leads]);
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex shrink-0 items-center justify-between border-b px-4 py-3">
         <h1 className="font-semibold text-lg">CRM – Leads</h1>
         <div className="flex items-center gap-2">
+          <Link
+            href="/contacts"
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <UsersIcon className="size-4" />
+            Contacts
+          </Link>
           <Link
             href="/properties"
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -393,17 +460,104 @@ export default function CRMPage() {
             <HomeIcon className="size-4" />
             Properties
           </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <MicIcon className="size-4" />
-            Voice Chat
-          </Link>
         </div>
       </header>
 
-      <main className="flex-1 overflow-auto p-4 space-y-6">
+      <main className="flex-1 overflow-auto px-2 py-4 space-y-6 sm:px-4">
+        <section>
+          <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
+            <div className="flex flex-row flex-wrap items-start justify-between gap-4 mb-2">
+              <div>
+                <h2 className="font-semibold text-base flex items-center gap-2">
+                  <BarChart3Icon className="size-4" />
+                  Leads & Scheduled Meetings
+                </h2>
+                {chartDateRange && (
+                  <p className="text-muted-foreground text-sm mt-1">
+                    {chartDateRange}
+                  </p>
+                )}
+              </div>
+              <Tabs
+                value={chartRange}
+                onValueChange={(v) => setChartRange(v as ChartRange)}
+              >
+                <TabsList variant="default" className="h-9 shrink-0">
+                  <TabsTrigger value="week" className="px-3 text-sm">
+                    Week
+                  </TabsTrigger>
+                  <TabsTrigger value="monthly" className="px-3 text-sm">
+                    Monthly
+                  </TabsTrigger>
+                  <TabsTrigger value="yearly" className="px-3 text-sm">
+                    Yearly
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            {chartLoading ? (
+              <div className="flex aspect-video items-center justify-center text-muted-foreground text-sm">
+                Loading chart...
+              </div>
+            ) : chartData.length === 0 ? (
+              <div className="flex aspect-video items-center justify-center text-muted-foreground text-sm">
+                No data for this period
+              </div>
+            ) : (
+              <ChartContainer config={CHART_CONFIG} className="-ml-6 h-[240px] w-full">
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 40, right: 8, left: 44, bottom: 8 }}
+                  accessibilityLayer
+                >
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    allowDecimals={false}
+                    width={40}
+                    label={{
+                      value: "Count",
+                      angle: -90,
+                      position: "insideLeft",
+                      dx: -12,
+                      style: { textAnchor: "middle", fontSize: 11 },
+                    }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                  <ChartLegend
+                    content={<ChartLegendContent />}
+                    align="right"
+                    verticalAlign="top"
+                    wrapperStyle={{ paddingBottom: 8 }}
+                  />
+                  <Bar
+                    dataKey="meetings"
+                    stackId="a"
+                    fill="var(--color-meetings)"
+                    radius={[0, 0, 4, 4]}
+                    name="Scheduled Meetings"
+                  />
+                  <Bar
+                    dataKey="leads"
+                    stackId="a"
+                    fill="var(--color-leads)"
+                    radius={[4, 4, 0, 0]}
+                    name="Leads"
+                  />
+                </BarChart>
+              </ChartContainer>
+            )}
+          </div>
+        </section>
+
         <section>
           <h2 className="font-semibold text-base mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 justify-between">
             <span className="flex items-center gap-2">
@@ -430,14 +584,72 @@ export default function CRMPage() {
                     <TableHead>Channel</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
+
                 </TableHeader>
                 <TableBody>
                   {displayMeetings.map((m) => (
                     <TableRow key={m.id}>
                       <TableCell>
-                        {m.date} at {m.time}
+                        {formatDateTimeParts(m.date, m.time)}
                       </TableCell>
-                      <TableCell className="font-medium">{m.leadName}</TableCell>
+                      <TableCell className="font-medium">
+                        
+                        <HoverCard openDelay={200} closeDelay={100}>
+                          <HoverCardTrigger asChild>
+                            <button
+                              type="button"
+                              className="text-left font-medium underline-offset-4 hover:underline cursor-pointer"
+                            >
+                              {m.leadName}
+                            </button>
+                          </HoverCardTrigger>
+                          <HoverCardContent align="start" className="w-72">
+                            <div className="space-y-3">
+                              <h4 className="font-semibold text-sm">
+                                Contact details
+                              </h4>
+                              {(() => {
+                                const lead = leadById.get(m.leadId);
+                                if (!lead) return <p className="text-muted-foreground text-sm">No details</p>;
+                                return (
+                                  <div className="space-y-2 text-sm">
+                                    {lead.name && (
+                                      <p className="flex items-center gap-2">
+                                        <span className="text-muted-foreground">Name:</span>
+                                        {lead.name}
+                                      </p>
+                                    )}
+                                    {lead.phone && (
+                                      <p className="flex items-center gap-2">
+                                        <PhoneIcon className="size-3.5 text-muted-foreground shrink-0" />
+                                        {lead.phone}
+                                      </p>
+                                    )}
+                                    {lead.email && (
+                                      <p className="flex items-center gap-2">
+                                        <MailIcon className="size-3.5 text-muted-foreground shrink-0" />
+                                        {lead.email}
+                                      </p>
+                                    )}
+                                    {lead.location && (
+                                      <p className="flex items-center gap-2">
+                                        <span className="text-muted-foreground">Location:</span>
+                                        {lead.location}
+                                      </p>
+                                    )}
+                                    {lead.intent && (
+                                      <p className="flex items-center gap-2">
+                                        <span className="text-muted-foreground">Intent:</span>
+                                        <span className="capitalize">{lead.intent}</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </TableCell>
                       <TableCell className="text-muted-foreground capitalize">
                         {m.type}
                       </TableCell>

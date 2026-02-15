@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArchiveIcon, ArrowRightIcon, Bath, BedDouble, HomeIcon, MicIcon, PlusIcon, XIcon } from "lucide-react";
+import { ArchiveIcon, ArrowRightIcon, BarChart3, Bath, BedDouble, HomeIcon, PlusIcon, XIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -452,25 +452,14 @@ export default function PropertiesPage() {
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between border-b px-4 py-3">
         <h1 className="font-semibold text-lg">Properties</h1>
-        <div className="flex items-center">
-          <Link
-            href="/crm"
-            className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <Button>
+        <div className="flex items-center gap-2">
+          <Link href="/crm">
+            <Button variant="ghost" className="gap-2">
+              <BarChart3 className="size-4" />
               Dashboard
             </Button>
           </Link>
           <AddPropertyModal onSuccess={fetchProperties} />
-          <Link
-            href="/"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <Button variant="outline">
-              <MicIcon className="size-4" />
-              Voice Chat
-            </Button>
-          </Link>
         </div>
       </header>
 

@@ -10,7 +10,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { HomeIcon, Bath, BedDouble, ArrowLeftIcon } from "lucide-react";
+import { HomeIcon, Bath, BedDouble, ArrowLeftIcon, BarChart3Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Property {
@@ -22,6 +22,7 @@ interface Property {
   beds: number;
   baths: number;
   sqft?: number;
+  description?: string;
   features?: string[];
   images?: string[];
   status?: "active" | "sold" | "archived";
@@ -68,7 +69,7 @@ export default function PropertyDetailsPage({
   if (!id || loading) {
     return (
       <div className="flex min-h-dvh flex-col">
-        <header className="flex shrink-0 items-center border-b px-4 py-3">
+        <header className="flex shrink-0 items-center border-b bg-primary-50 px-4 py-3">
           <Link href="/properties">
             <Button variant="ghost" size="sm">
               <ArrowLeftIcon className="size-4 mr-1" />
@@ -86,7 +87,7 @@ export default function PropertyDetailsPage({
   if (error || !property) {
     return (
       <div className="flex min-h-dvh flex-col">
-        <header className="flex shrink-0 items-center border-b px-4 py-3">
+        <header className="flex shrink-0 items-center border-b bg-primary-50 px-4 py-3">
           <Link href="/properties">
             <Button variant="ghost" size="sm">
               <ArrowLeftIcon className="size-4 mr-1" />
@@ -118,8 +119,9 @@ export default function PropertyDetailsPage({
           </Button>
         </Link>
         <Link href="/crm">
-          <Button variant="outline" size="sm">
-            CRM
+          <Button variant="ghost" size="sm" className="gap-2">
+            <BarChart3Icon className="size-4" />
+            Dashboard
           </Button>
         </Link>
       </header>
@@ -216,6 +218,15 @@ export default function PropertyDetailsPage({
                     </span>
                   ))}
                 </div>
+              </div>
+            ) : null}
+
+            {property.description ? (
+              <div className="rounded-xl border bg-card p-4">
+                <h3 className="font-medium text-sm mb-2">About this property</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {property.description}
+                </p>
               </div>
             ) : null}
           </div>

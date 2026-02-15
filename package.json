@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:docker": "docker-compose up -d && next dev",
+    "docker:up": "docker-compose up -d",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -11,6 +13,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.29",
     "@ai-sdk/react": "^3.0.88",
+    "@faker-js/faker": "^10.3.0",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@rive-app/react-webgl2": "^4.27.0",
     "@streamdown/cjk": "^1.0.2",
@@ -35,6 +38,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-jsx-parser": "^2.4.1",
+    "recharts": "2.15.4",
     "shiki": "^3.22.0",
     "streamdown": "^2.2.0",
     "tailwind-merge": "^3.4.0",

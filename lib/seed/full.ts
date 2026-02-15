@@ -1,15 +1,54 @@
-import { Lead, Property } from "@/lib/db";
+import { faker } from "@faker-js/faker";
+import { Contact, Lead, Property, Schedule } from "@/lib/db";
 import { SEED_PROPERTIES } from "@/lib/data/properties";
 
+function dateStr(daysFromToday: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromToday);
+  return d.toISOString().slice(0, 10);
+}
+
+function generateContacts(count: number): Array<{ name: string; phone: string; email: string; source: "inbound" | "outbound" }> {
+  const contacts: Array<{ name: string; phone: string; email: string; source: "inbound" | "outbound" }> = [];
+  const usedEmails = new Set<string>();
+  while (contacts.length < count) {
+    const name = faker.person.fullName();
+    const email = faker.internet.email().toLowerCase();
+    if (usedEmails.has(email)) continue;
+    usedEmails.add(email);
+    contacts.push({
+      name,
+      phone: faker.phone.number({ style: "international" }),
+      email,
+      source: faker.helpers.arrayElement(["inbound", "outbound"] as const),
+    });
+  }
+  return contacts;
+}
+
 export async function runFullSeed() {
+  await Schedule.deleteMany({});
   await Lead.deleteMany({});
+  await Contact.deleteMany({});
   await Property.deleteMany({});
 
   const properties = await Property.insertMany(SEED_PROPERTIES);
   const propIds = properties.map((p) => p._id);
 
+  const leadContacts = [
+    { name: "Sarah Chen", phone: "(512) 555-0142", email: "sarah.chen@email.com", source: "inbound" as const },
+    { name: "Marcus Johnson", phone: "(512) 555-0189", email: "m.johnson@email.com", source: "inbound" as const },
+    { name: "Emily Rodriguez", phone: "(512) 555-0221", email: "emily.r@email.com", source: "outbound" as const },
+    { name: "David Park", phone: "(512) 555-0333", email: "david.park@email.com", source: "outbound" as const },
+  ];
+  const fakerContacts = generateContacts(46);
+  const contactData = [...leadContacts, ...fakerContacts];
+  const contacts = await Contact.insertMany(contactData);
+  const contactIds = contacts.map((c) => c._id);
+
   const leads = [
     {
+      contact: contactIds[0],
       name: "Sarah Chen",
       phone: "(512) 555-0142",
       email: "sarah.chen@email.com",
@@ -31,10 +70,11 @@ export async function runFullSeed() {
         next_best_action: "Propose tour slots for next week",
       },
       appointments: [
-        { date: "2025-02-18", time: "2:00 PM", confirmed: true, channel: "inbound" as const, purpose: "Property tour" },
+        { date: dateStr(3), time: "2:00 PM", confirmed: true, channel: "inbound" as const, purpose: "Property tour" },
       ],
     },
     {
+      contact: contactIds[1],
       name: "Marcus Johnson",
       phone: "(512) 555-0189",
       email: "m.johnson@email.com",
@@ -55,10 +95,11 @@ export async function runFullSeed() {
         next_best_action: "Schedule listing appointment",
       },
       appointments: [
-        { date: "2025-02-17", time: "4:00 PM", confirmed: true, channel: "inbound" as const, purpose: "Listing appointment" },
+        { date: dateStr(2), time: "4:00 PM", confirmed: true, channel: "inbound" as const, purpose: "Listing appointment" },
       ],
     },
     {
+      contact: contactIds[2],
       name: "Emily Rodriguez",
       phone: "(512) 555-0221",
       email: "emily.r@email.com",
@@ -82,6 +123,7 @@ export async function runFullSeed() {
       appointments: [],
     },
     {
+      contact: contactIds[3],
       name: "David Park",
       phone: "(512) 555-0333",
       email: "david.park@email.com",
@@ -102,12 +144,19 @@ export async function runFullSeed() {
         next_best_action: "Call back to schedule listing appointment",
       },
       appointments: [
-        { date: "2025-02-19", time: "10:00 AM", confirmed: false, channel: "outbound" as const, purpose: "Listing consultation" },
+        { date: dateStr(4), time: "10:00 AM", confirmed: false, channel: "outbound" as const, purpose: "Listing consultation" },
       ],
     },
   ];
 
-  await Lead.insertMany(leads as Parameters<typeof Lead.insertMany>[0]);
+  const insertedLeads = await Lead.insertMany(leads as Parameters<typeof Lead.insertMany>[0]);
 
-  return { propertiesCount: properties.length, leadsCount: 4 };
+  const scheduleData = [
+    { contact: contactIds[0], lead: insertedLeads[0]._id, date: dateStr(3), time: "2:00 PM", status: "confirmed" as const, purpose: "Property tour", channel: "inbound" as const },
+    { contact: contactIds[1], lead: insertedLeads[1]._id, date: dateStr(2), time: "4:00 PM", status: "confirmed" as const, purpose: "Listing appointment", channel: "inbound" as const },
+    { contact: contactIds[3], lead: insertedLeads[3]._id, date: dateStr(4), time: "10:00 AM", status: "proposed" as const, purpose: "Listing consultation", channel: "outbound" as const },
+  ];
+  await Schedule.insertMany(scheduleData);
+
+  return { propertiesCount: properties.length, leadsCount: 4, contactsCount: contacts.length, schedulesCount: 3 };
 }

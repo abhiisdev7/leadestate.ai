@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${funnelDisplay.variable} ${inter.className} antialiased font-sans min-h-dvh bg-neutral-100`}
+        className={`${inter.variable} ${funnelDisplay.variable} ${inter.className} antialiased font-sans min-h-dvh bg-background`}
       >
         {children}
       </body>
