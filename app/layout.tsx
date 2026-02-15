@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Funnel_Display } from "next/font/google";
 import "./globals.css";
+import { DeveloperSignature } from "@/components/developer-signature";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,9 +26,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${funnelDisplay.variable} ${inter.className} antialiased font-sans min-h-dvh bg-gray-100`}
+        className={`${inter.variable} ${funnelDisplay.variable} ${inter.className} antialiased font-sans min-h-dvh bg-gray-100 flex flex-col`}
       >
-        {children}
+        <div className="flex-1 min-h-0">{children}</div>
+        <DeveloperSignature />
       </body>
     </html>
   );

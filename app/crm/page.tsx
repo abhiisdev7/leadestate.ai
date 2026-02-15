@@ -40,7 +40,14 @@ import {
   SearchIcon,
   UsersIcon,
   BarChart3Icon,
+  InfoIcon,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn, formatDateTimeParts } from "@/lib/utils";
 
 interface Property {
@@ -593,7 +600,29 @@ export default function CRMPage() {
                     <TableHead>Lead</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Purpose</TableHead>
-                    <TableHead>Source</TableHead>
+                    <TableHead>
+                      <span className="inline-flex items-center gap-1">
+                        Source
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                                aria-label="What does Source mean?"
+                              >
+                                <InfoIcon className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[240px]">
+                              <p className="font-medium mb-1">Source</p>
+                              <p className="mb-1"><strong>Buyer (Inbound):</strong> Someone who wants to buy a property from us reaching out to find their next home.</p>
+                              <p><strong>Seller (Outbound):</strong> Someone who wants to sell their property through us looking to list with our brokerage.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    </TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
 
@@ -769,11 +798,78 @@ export default function CRMPage() {
                   <TableRow>
                     <TableHead className="w-10" />
                     <TableHead>Name</TableHead>
-                    <TableHead>Intent</TableHead>
-                    <TableHead>Source</TableHead>
+                    <TableHead>
+                      <span className="inline-flex items-center gap-1">
+                        Intent
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                                aria-label="What does Intent mean?"
+                              >
+                                <InfoIcon className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[240px]">
+                              <p className="font-medium mb-1">Intent</p>
+                              <p className="mb-1 flex"><strong>Buy:</strong> Lead wants to purchase a property.</p>
+                              <p className="mb-1 flex"><strong>Sell:</strong> Lead wants to list their property for sale.</p>
+                              <p className="mb-1 flex"><strong>Both:</strong> Lead wants to sell and buy (e.g., sell current home and buy a new one).</p>
+                              <p><strong>Unknown:</strong> Intent not yet determined from the conversation.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="inline-flex items-center gap-1">
+                        Source
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                                aria-label="What does Source mean?"
+                              >
+                                <InfoIcon className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[240px]">
+                              <p className="font-medium mb-1">Source</p>
+                              <p className="mb-1"><strong>Buyer (Inbound):</strong> Someone who wants to buy a property from us reaching out to find their next home.</p>
+                              <p><strong>Seller (Outbound):</strong> Someone who wants to sell their property through us looking to list with our brokerage.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    </TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Budget</TableHead>
-                    <TableHead>Location</TableHead>
+                    <TableHead>
+                      <span className="inline-flex items-center gap-1">
+                        Location
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                                aria-label="What does Location mean?"
+                              >
+                                <InfoIcon className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[240px]">
+                              <p className="font-medium mb-1">Location</p>
+                              <p>For <strong>buyers:</strong> preferred area, city, or region for their property search. For <strong>sellers:</strong> where their property is located.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    </TableHead>
                     <TableHead>Timeline</TableHead>
                     <TableHead className="text-center">Score (10)</TableHead>
                     <TableHead>Next Action</TableHead>
