@@ -163,6 +163,24 @@ See `.env.example` for the full list.
 
 ---
 
+## Future Roadmap
+
+Additional features we may add—useful to mention in demos:
+
+| Feature | Description |
+|---------|-------------|
+| **Reschedule via email** | When a customer replies "can we move it to next week?", auto-propose new slots and confirm via email thread |
+| **SMS channel** | Send meeting reminders and handle replies via Twilio; qualify leads who text instead of chat |
+| **Twilio voice** | Real phone calls—inbound/outbound with speech-to-text; no browser required |
+| **Agent handoff** | When lead is hot or requests human, flag in CRM and notify agent; warm transfer option |
+| **Compliance scripts** | Auto-check disclosures, fair housing language, and required scripts before closing |
+| **Personalization memory** | Remember preferences across sessions (e.g. "no HOA", "must have backyard") for repeat visitors |
+| **Nurture sequences** | Automated outbound follow-ups for cold leads—objection handling, re-engagement emails |
+| **Calendar sync** | Google Calendar / Outlook integration for real availability and automatic booking |
+| **Lead scoring** | Score leads by intent, budget, timeline; surface hottest leads first in CRM |
+
+---
+
 ## Tech Stack
 
 - **Framework:** Next.js 16
