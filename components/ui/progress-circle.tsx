@@ -3,66 +3,52 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-interface ProgressCircleProps {
+interface ProgressBarProps {
   value: number;
   max?: number;
-  size?: number;
-  strokeWidth?: number;
+  steps?: number;
   className?: string;
 }
 
 function getScoreColor(score: number, max: number): string {
   const pct = score / max;
-  if (pct >= 0.8) return "stroke-emerald-500";
-  if (pct >= 0.6) return "stroke-green-500";
-  if (pct >= 0.5) return "stroke-amber-500";
-  return "stroke-red-500";
+  if (pct >= 0.8) return "bg-emerald-500";
+  if (pct >= 0.6) return "bg-green-500";
+  if (pct >= 0.5) return "bg-amber-500";
+  return "bg-red-500";
 }
 
 export function ProgressCircle({
   value,
   max = 10,
-  size = 32,
-  strokeWidth = 3,
+  steps = 10,
   className,
-}: ProgressCircleProps) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
+}: ProgressBarProps) {
   const pct = Math.min(1, Math.max(0, value / max));
-  const strokeDashoffset = circumference - circumference * pct;
+  const stepsFilled = Math.min(steps, Math.round(pct * steps));
+  const percentLabel = Math.round(pct * 100);
 
   return (
     <div
-      className={cn("relative inline-flex items-center justify-center", className)}
+      className={cn("flex items-center gap-2", className)}
       role="progressbar"
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={max}
     >
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          className="text-muted/30"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className={cn("transition-all duration-300", getScoreColor(value, max))}
-        />
-      </svg>
-      <span className="absolute text-xs font-semibold text-foreground">
-        {value}
+      <div className="flex flex-1 min-w-0 gap-0.5">
+        {Array.from({ length: steps }).map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "h-2 flex-1 min-w-1 rounded-none transition-colors",
+              i < stepsFilled ? getScoreColor(value, max) : "bg-muted"
+            )}
+          />
+        ))}
+      </div>
+      <span className="shrink-0 text-xs font-medium text-muted-foreground tabular-nums">
+        {percentLabel}%
       </span>
     </div>
   );

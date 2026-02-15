@@ -187,7 +187,12 @@ function LeadRow({
         <TableCell className="text-center">
           {lead.readiness_score != null ? (
             <div className="flex justify-center">
-              <ProgressCircle value={lead.readiness_score} max={10} size={36} />
+              <ProgressCircle
+                value={lead.readiness_score}
+                max={10}
+                steps={10}
+                className="w-28"
+              />
             </div>
           ) : (
             <span className="text-muted-foreground">—</span>
