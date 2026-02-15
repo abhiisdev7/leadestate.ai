@@ -181,10 +181,62 @@ Additional features we may add—useful to mention in demos:
 
 ---
 
-## Tech Stack
+## Technologies Used
 
-- **Framework:** Next.js 16
-- **AI:** Google Gemini (Vercel AI SDK)
-- **Database:** MongoDB (Mongoose)
-- **Email:** Nodemailer (SMTP), ImapFlow (IMAP)
-- **Voice:** Web Speech API
+### Framework & Runtime
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Next.js** | 16 | React framework with App Router, API routes, server components, and Vercel deployment |
+| **React** | 19 | UI components, hooks, and client-side interactivity |
+| **TypeScript** | 5 | Type safety and better developer experience |
+
+### AI & Chat
+
+| Technology | Purpose |
+|------------|---------|
+| **Google Gemini** | Large language model for conversation, lead qualification, property suggestions, and email intent classification |
+| **Vercel AI SDK** | Streaming chat, tool calling, and structured outputs for the voice assistant |
+| **Zod** | Schema validation for AI tool inputs and structured responses |
+
+### Database
+
+| Technology | Purpose |
+|------------|---------|
+| **MongoDB** | NoSQL database for leads, contacts, schedules, and properties |
+| **Mongoose** | ODM for schemas, models, queries, and relationships |
+
+### Email
+
+| Technology | Purpose |
+|------------|---------|
+| **Nodemailer** | SMTP transport for sending meeting confirmation and cancellation reply emails |
+| **ImapFlow** | IMAP client for fetching inbox and detecting replies to meeting confirmations |
+| **mailparser** | Parsing email bodies and headers (In-Reply-To, References) for threading |
+
+### Voice & Media
+
+| Technology | Purpose |
+|------------|---------|
+| **Web Speech API** | Browser-based speech recognition (voice input) and synthesis (text-to-speech) |
+| **Lottie** | Animated illustrations (e.g. email confirmation animation) |
+| **Embla Carousel** | Image carousel on property details page |
+
+### UI & Styling
+
+| Technology | Purpose |
+|------------|---------|
+| **Tailwind CSS** | Utility-first styling and responsive design |
+| **Radix UI** | Accessible primitives (dialogs, dropdowns, tabs) |
+| **Lucide React** | Icon set |
+| **Motion** | Animations and transitions |
+| **Recharts** | CRM dashboard charts (leads, meetings over time) |
+
+### Utilities & Tooling
+
+| Technology | Purpose |
+|------------|---------|
+| **node-cron** | Scheduled tasks for the standalone email observer script |
+| **dotenv** | Loading environment variables in scripts |
+| **tsx** | Running TypeScript scripts (email observer) |
+| **nanoid** | Unique ID generation |
