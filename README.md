@@ -2,6 +2,8 @@
 
 AI-powered inbound/outbound agent for US real estate. Handles buyer and seller inquiries, qualifies leads, schedules calls, sends confirmation emails, and processes cancellation replies automatically.
 
+**Live demo:** [Conversation chatbot](https://leadestate-ai.vercel.app/) · [CRM dashboard](https://leadestate-ai.vercel.app/crm)
+
 ---
 
 ## Quick Start
@@ -51,10 +53,10 @@ A styled HTML email is sent to the customer with the meeting details. The email 
 
 **Example confirmation email:**
 
-| Field | Content |
-|-------|---------|
-| **Subject** | Your call is scheduled – [date] at [time] |
-| **Body** | Lead name, date, time, purpose. "If you need to reschedule, reply to this email or give us a call." |
+| Field       | Content                                                                                             |
+| ----------- | --------------------------------------------------------------------------------------------------- |
+| **Subject** | Your call is scheduled – [date] at [time]                                                           |
+| **Body**    | Lead name, date, time, purpose. "If you need to reschedule, reply to this email or give us a call." |
 
 ### 4. Customer Replies to Cancel
 
@@ -69,10 +71,10 @@ If the customer replies with cancellation intent (e.g. "I wanted to cancel this 
 
 **Example cancellation reply:**
 
-| Field | Content |
-|-------|---------|
-| **Subject** | Re: Your call is scheduled – [date] at [time] |
-| **Body** | "We've received your request and cancelled your call scheduled for [date] at [time]. If you'd like to reschedule at a different time, simply reply to this email or give us a call." |
+| Field       | Content                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Subject** | Re: Your call is scheduled – [date] at [time]                                                                                                                                        |
+| **Body**    | "We've received your request and cancelled your call scheduled for [date] at [time]. If you'd like to reschedule at a different time, simply reply to this email or give us a call." |
 
 ### Email Observer (Cron)
 
@@ -125,14 +127,14 @@ Sold, Archive, and Mark active actions for status updates.
 
 Set variables in `.env`. Use `.env.example` as a template: copy it to `.env` and replace the placeholder values with your own.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Yes | Google Gemini API key |
-| `DATABASE_URL` or `DB_*` | Yes | MongoDB connection |
-| `SMTP_MAIL` | For emails | Sender email (Gmail: use App Password) |
-| `SMTP_MAIL_PASSWORD` | For emails | SMTP password |
-| `IMAP_MAIL` / `IMAP_MAIL_PASSWORD` | For cancel flow | Same as SMTP for Gmail |
-| `CRON_SECRET` | Optional | Protects `/api/cron/email-observer` |
+| Variable                           | Required        | Description                            |
+| ---------------------------------- | --------------- | -------------------------------------- |
+| `GOOGLE_GENERATIVE_AI_API_KEY`     | Yes             | Google Gemini API key                  |
+| `DATABASE_URL` or `DB_*`           | Yes             | MongoDB connection                     |
+| `SMTP_MAIL`                        | For emails      | Sender email (Gmail: use App Password) |
+| `SMTP_MAIL_PASSWORD`               | For emails      | SMTP password                          |
+| `IMAP_MAIL` / `IMAP_MAIL_PASSWORD` | For cancel flow | Same as SMTP for Gmail                 |
+| `CRON_SECRET`                      | Optional        | Protects `/api/cron/email-observer`    |
 
 See `.env.example` for the full list.
 
@@ -140,24 +142,24 @@ See `.env.example` for the full list.
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start dev server |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
+| Command                  | Description                    |
+| ------------------------ | ------------------------------ |
+| `npm run dev`            | Start dev server               |
+| `npm run build`          | Production build               |
+| `npm run start`          | Start production server        |
 | `npm run email-observer` | Run IMAP observer (standalone) |
 
 ---
 
 ## Routes
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Voice Chat |
-| `/crm` | CRM Dashboard |
-| `/properties` | Properties grid |
+| Route              | Purpose          |
+| ------------------ | ---------------- |
+| `/`                | Voice Chat       |
+| `/crm`             | CRM Dashboard    |
+| `/properties`      | Properties grid  |
 | `/properties/[id]` | Property details |
-| `/contacts` | Contacts list |
+| `/contacts`        | Contacts list    |
 
 ---
 
