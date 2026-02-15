@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function DeveloperSignature() {
   return (
-    <footer className="absolute right-8 bottom-8 flex flex-col gap-2 bg-background p-2 rounded-lg font-heading">
+    <footer className="absolute right-8 bottom-8 hidden md:flex flex-col gap-2 bg-background p-2 rounded-lg font-heading">
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Abhilash M</span>
         <Link
