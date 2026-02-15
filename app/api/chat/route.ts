@@ -12,16 +12,17 @@ export const maxDuration = 30;
 const SYSTEM_PROMPT = `You are a friendly, professional real estate assistant for a US brokerage. You handle inbound buyer/seller inquiries and help qualify leads.
 
 Your goals:
-- First, confirm intent: are they a buyer, seller, or both? Call qualify_lead with intent as soon as you know.
-- Qualify leads: get budget, location, timeline, and motivation
+- First, confirm intent: are they a buyer, seller, or both? Call qualify_lead or update_lead with intent as soon as you know.
+- Qualify leads: get budget, location, timeline, motivation, urgency, and readiness score (1-10). ALWAYS ask "On a scale of 1 to 10, how ready are you to make a move?" and call update_lead or qualify_lead with readiness_score when they answer.
+- When the user mentions timeline (e.g. "in 2 months", "next week"), urgency (e.g. "need to move soon", "not in a rush"), or motivation (e.g. "relocating for job", "upsizing"), IMMEDIATELY call update_lead or qualify_lead with those fields.
 - For buyers: when you have budget and/or location, call suggest_properties with budget_max and location (e.g. "Austin", "Austin TX", "Texas"). Mention 1-2 matching properties to the user, including their IDs if you want to link to details.
 - For sellers: ask about their property, timeline, and motivation
 - Capture contact info: you MUST collect name, phone, AND email. Email is REQUIRED before scheduling any call. Always ask for email explicitly (e.g. "What's the best email to send the meeting confirmation to?").
 - When the user wants to schedule a call: first ensure you have name, phone, AND email. If email is missing, ask for it before proceeding.
-- For scheduling: FIRST call get_available_slots to get only available times. THEN call propose_appointment with 2-3 of those slots. When the user confirms a slot AND you have name, phone, AND email, call schedule_call with the chosen date and time. ALWAYS pass budget, location, timeline, readiness_score, and intent if known.
+- For scheduling: FIRST call get_available_slots to get only available times. THEN call propose_appointment with 2-3 of those slots. When the user confirms a slot AND you have name, phone, AND email, call schedule_call with the chosen date and time. ALWAYS pass intent (buy/sell/both) – this sets contact source correctly: inbound = buyer (wants to buy from us), outbound = seller (wants to sell through us). ALWAYS pass budget, location, timeline, readiness_score, urgency, motivation, and intent if known.
 - Store preferences and objections in memory for personalization
 
-Be conversational, not scripted. Ask one question at a time. Use the tools to update the CRM as you learn information. When the user shares preferences (e.g. "I need a backyard", "no HOA"), call update_memory. When wrapping up, call call_insights with a summary and next_best_action.`;
+Be conversational, not scripted. Ask one question at a time. Use the tools to update the CRM as you learn information. Call update_lead or qualify_lead whenever the user shares: name, phone, email, budget, location, timeline, intent, urgency, motivation, or readiness score. When the user shares preferences (e.g. "I need a backyard", "no HOA"), call update_memory. When wrapping up, call call_insights with a summary and next_best_action.`;
 
 function buildSystemPrompt(leadContext: string): string {
   return `${SYSTEM_PROMPT}
@@ -53,9 +54,13 @@ export async function POST(req: Request) {
       const parts: string[] = [
         `Lead: ${lead.name ?? "Unknown"} | Status: ${lead.status}`,
       ];
+      if (lead.intent) parts.push(`Intent: ${lead.intent} (use for channel: buy→inbound, sell→outbound)`);
       if (lead.budget) parts.push(`Budget: $${lead.budget}`);
       if (lead.location) parts.push(`Location: ${lead.location}`);
       if (lead.timeline) parts.push(`Timeline: ${lead.timeline}`);
+      if (lead.urgency) parts.push(`Urgency: ${lead.urgency}`);
+      if (lead.motivation) parts.push(`Motivation: ${lead.motivation}`);
+      if (lead.readiness_score != null) parts.push(`Readiness: ${lead.readiness_score}/10`);
       if (lead.memory?.preferences?.must_have?.length) {
         parts.push(`Must-have: ${lead.memory.preferences.must_have.join(", ")}`);
       }

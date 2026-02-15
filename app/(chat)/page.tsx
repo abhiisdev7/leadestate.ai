@@ -3,6 +3,8 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Lottie from "lottie-react";
+import emailAnimation from "@/assets/email-anination.json";
 import { SpeechInput } from "@/components/ai-elements/speech-input";
 import {
   Conversation,
@@ -153,10 +155,13 @@ export default function VoiceChatPage() {
           </div>
         </header>
         <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8">
-          <div className="flex size-16 items-center justify-center rounded-full bg-green-100 text-green-600">
-            <svg className="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+          <div className="size-48 sm:size-56 max-w-[280px]">
+            <Lottie
+              animationData={emailAnimation}
+              loop={false}
+              autoplay={true}
+              className="w-full h-full"
+            />
           </div>
           <div className="text-center space-y-2">
             <h2 className="font-semibold text-lg">Call scheduled</h2>

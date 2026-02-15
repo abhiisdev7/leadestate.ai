@@ -152,7 +152,7 @@ function LeadRow({
             ) : (
               <ArrowUpRightIcon className="size-3.5 shrink-0" />
             )}
-            {lead.channel ?? "—"}
+            {lead.channel === "inbound" ? "Buyer" : lead.channel === "outbound" ? "Seller" : "—"}
           </Badge>
         </TableCell>
         <TableCell>
@@ -168,7 +168,14 @@ function LeadRow({
         <TableCell>
           {lead.budget ? `$${lead.budget.toLocaleString()}` : "—"}
         </TableCell>
-        <TableCell>{lead.location ?? "—"}</TableCell>
+        <TableCell
+          className="max-w-[12rem]"
+          title={lead.location ?? undefined}
+        >
+          <span className="line-clamp-2 block break-words">
+            {lead.location ?? "—"}
+          </span>
+        </TableCell>
         <TableCell>{lead.timeline ?? "—"}</TableCell>
         <TableCell className="text-center">
           {lead.readiness_score != null ? (
@@ -179,8 +186,13 @@ function LeadRow({
             <span className="text-muted-foreground">—</span>
           )}
         </TableCell>
-        <TableCell className="max-w-[180px] truncate">
-          {lead.next_action ?? "—"}
+        <TableCell
+          className="max-w-[10rem]"
+          title={lead.next_action ?? undefined}
+        >
+          <span className="line-clamp-2 block break-words">
+            {lead.next_action ?? "—"}
+          </span>
         </TableCell>
       </TableRow>
       {isExpanded && hasDetails && (
@@ -581,7 +593,7 @@ export default function CRMPage() {
                     <TableHead>Lead</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Purpose</TableHead>
-                    <TableHead>Channel</TableHead>
+                    <TableHead>Source</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
 
@@ -593,7 +605,7 @@ export default function CRMPage() {
                         {formatDateTimeParts(m.date, m.time)}
                       </TableCell>
                       <TableCell className="font-medium">
-                        
+
                         <HoverCard openDelay={200} closeDelay={100}>
                           <HoverCardTrigger asChild>
                             <button
@@ -677,7 +689,7 @@ export default function CRMPage() {
                           ) : (
                             <ArrowUpRightIcon className="size-3.5 shrink-0" />
                           )}
-                          {m.channel}
+                          {m.channel === "inbound" ? "Buyer" : m.channel === "outbound" ? "Seller" : m.channel}
                         </Badge>
                       </TableCell>
                       <TableCell
@@ -733,10 +745,10 @@ export default function CRMPage() {
                     All
                   </TabsTrigger>
                   <TabsTrigger value="inbound" className="px-3 text-sm">
-                    Inbound
+                    Buyers
                   </TabsTrigger>
                   <TabsTrigger value="outbound" className="px-3 text-sm">
-                    Outbound
+                    Sellers
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -758,7 +770,7 @@ export default function CRMPage() {
                     <TableHead className="w-10" />
                     <TableHead>Name</TableHead>
                     <TableHead>Intent</TableHead>
-                    <TableHead>Channel</TableHead>
+                    <TableHead>Source</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Budget</TableHead>
                     <TableHead>Location</TableHead>

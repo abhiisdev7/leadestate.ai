@@ -9,7 +9,7 @@ export function createTools(leadId: string | null) {
   return {
     update_lead: tool({
       description:
-        "Create or update a lead in the CRM. Use when the user shares their name, phone, email, budget, location, timeline, intent, or readiness. Call frequently to keep lead data up to date.",
+        "Create or update a lead in the CRM. Use when the user shares their name, phone, email, budget, location, timeline, intent, urgency, motivation, or readiness_score (1-10). Call IMMEDIATELY when the user mentions timeline, urgency (e.g. 'need to move soon'), motivation (e.g. 'relocating for job'), or readiness. Call frequently to keep lead data up to date.",
       inputSchema: z.object({
         name: z.string().optional(),
         phone: z.string().optional(),
@@ -20,6 +20,7 @@ export function createTools(leadId: string | null) {
         timeline: z.string().optional(),
         intent: z.enum(["buy", "sell", "both", "unknown"]).optional(),
         urgency: z.enum(["high", "medium", "low"]).optional(),
+        motivation: z.string().optional().describe("Why they're buying/selling e.g. relocating, upsizing"),
         readiness_score: z.number().min(0).max(10).optional(),
       }),
       execute: async (input) => {
@@ -48,16 +49,16 @@ export function createTools(leadId: string | null) {
 
     qualify_lead: tool({
       description:
-        "Qualify a lead with intent, urgency, budget, location, timeline, and readiness score. Call when the user describes their buying/selling criteria.",
+        "Qualify a lead with intent, urgency, budget, location, timeline, motivation, and readiness score (0-10). Call when the user describes their buying/selling criteria, timeline, urgency, motivation, or readiness. ALWAYS pass timeline, urgency, motivation, and readiness_score when the user shares them.",
       inputSchema: z.object({
         intent: z.enum(["buy", "sell", "both", "unknown"]).optional(),
-        urgency: z.enum(["high", "medium", "low"]).optional(),
+        urgency: z.enum(["high", "medium", "low"]).optional().describe("high=urgent, medium=flexible, low=exploring"),
         budget_range: z.string().optional(),
         budget_max: z.number().optional(),
         location: z.string().optional(),
-        timeline: z.string().optional(),
-        motivation: z.string().optional(),
-        readiness_score: z.number().min(0).max(10).optional(),
+        timeline: z.string().optional().describe("e.g. '2-3 months', 'next week', 'within 6 months'"),
+        motivation: z.string().optional().describe("Why buying/selling e.g. relocating, upsizing, job transfer"),
+        readiness_score: z.number().min(0).max(10).optional().describe("1-10 scale, how ready they are to make a move"),
       }),
       execute: async (input) => {
         await connectDB();
@@ -67,6 +68,7 @@ export function createTools(leadId: string | null) {
         if (input.timeline) update.timeline = input.timeline;
         if (input.intent) update.intent = input.intent;
         if (input.urgency) update.urgency = input.urgency;
+        if (input.motivation) update.motivation = input.motivation;
         if (input.readiness_score !== undefined) update.readiness_score = input.readiness_score;
         update.status = "qualified";
 
@@ -231,7 +233,7 @@ export function createTools(leadId: string | null) {
 
     schedule_call: tool({
       description:
-        "Schedule a call and finalize the booking. Call ONLY when the user has confirmed a date/time AND you have their name, phone, AND email. Use a slot from get_available_slots. Creates Contact, Lead, and Schedule records. Email is REQUIRED.",
+        "Schedule a call and finalize the booking. Call ONLY when the user has confirmed a date/time AND you have their name, phone, AND email. Use a slot from get_available_slots. Creates Contact, Lead, and Schedule records. Email is REQUIRED. ALWAYS pass intent if known – channel is derived from intent: inbound = buyer (wants to buy from us), outbound = seller (wants to sell through us). ALWAYS pass budget, location, timeline, readiness_score, urgency, motivation, and intent if known.",
       inputSchema: z.object({
         name: z.string().describe("Lead's full name"),
         phone: z.string().describe("Lead's phone number"),
@@ -239,15 +241,22 @@ export function createTools(leadId: string | null) {
         date: z.string().describe("Date in YYYY-MM-DD format"),
         time: z.string().describe("Time e.g. 2:00 PM"),
         purpose: z.string().optional().describe("Purpose of the call e.g. Discovery call, Property tour"),
-        channel: z.enum(["inbound", "outbound"]).optional().default("inbound"),
+        channel: z.enum(["inbound", "outbound"]).optional().describe("inbound = buyer, outbound = seller. Derived from intent if not provided."),
         budget: z.number().optional().describe("Lead's budget in dollars if known"),
         location: z.string().optional().describe("Lead's preferred location/area if known"),
         timeline: z.string().optional().describe("Lead's timeline e.g. within 1 week, 2-3 months"),
         readiness_score: z.number().min(0).max(10).optional().describe("Lead readiness 0-10 if known"),
         intent: z.enum(["buy", "sell", "both", "unknown"]).optional(),
+        urgency: z.enum(["high", "medium", "low"]).optional(),
+        motivation: z.string().optional().describe("Why buying/selling e.g. relocating, upsizing"),
       }),
       execute: async (input) => {
         await connectDB();
+
+        // Inbound = buyer (wants to buy from us), Outbound = seller (wants to sell through us)
+        const channel =
+          input.channel ??
+          (input.intent === "sell" ? "outbound" : "inbound");
 
         let contact = await Contact.findOne({
           $or: [{ email: input.email }, ...(input.phone ? [{ phone: input.phone }] : [])],
@@ -258,7 +267,7 @@ export function createTools(leadId: string | null) {
             name: input.name,
             phone: input.phone,
             email: input.email,
-            source: input.channel,
+            source: channel,
           });
         } else {
           await Contact.findByIdAndUpdate(contact._id, {
@@ -266,6 +275,7 @@ export function createTools(leadId: string | null) {
               name: input.name,
               phone: input.phone,
               email: input.email,
+              source: channel,
             },
           });
         }
@@ -275,7 +285,7 @@ export function createTools(leadId: string | null) {
           name: input.name,
           phone: input.phone,
           email: input.email,
-          channel: input.channel,
+          channel,
           status: "qualified",
           next_action: `Call scheduled – ${input.date} at ${input.time}`,
         };
@@ -284,6 +294,8 @@ export function createTools(leadId: string | null) {
         if (input.timeline != null) baseSet.timeline = input.timeline;
         if (input.readiness_score != null) baseSet.readiness_score = input.readiness_score;
         if (input.intent != null) baseSet.intent = input.intent;
+        if (input.urgency != null) baseSet.urgency = input.urgency;
+        if (input.motivation != null) baseSet.motivation = input.motivation;
 
         let lead;
         if (leadId) {
@@ -301,7 +313,7 @@ export function createTools(leadId: string | null) {
           time: input.time,
           status: "confirmed",
           purpose: input.purpose ?? "Discovery call",
-          channel: input.channel,
+          channel,
         });
 
         await Lead.findByIdAndUpdate(lead._id, {
@@ -310,14 +322,14 @@ export function createTools(leadId: string | null) {
               date: input.date,
               time: input.time,
               confirmed: true,
-              channel: input.channel,
+              channel,
               purpose: input.purpose ?? "Discovery call",
             },
           },
         });
 
         let emailSent = false;
-        if (input.channel === "inbound" && input.email) {
+        if (channel === "inbound" && input.email) {
           try {
             await sendMeetingSchedulerEmail({
               to: input.email,
@@ -336,7 +348,7 @@ export function createTools(leadId: string | null) {
           success: true,
           message: emailSent
             ? `Call scheduled for ${input.date} at ${input.time}. A confirmation email has been sent to ${input.email}.`
-            : `Call scheduled for ${input.date} at ${input.time}.${!emailSent && input.channel === "inbound" ? " (Email could not be sent – please check SMTP config.)" : ""}`,
+            : `Call scheduled for ${input.date} at ${input.time}.${!emailSent && channel === "inbound" ? " (Email could not be sent – please check SMTP config.)" : ""}`,
           closeChat: true,
           lead_id: lead._id.toString(),
           contact_id: contact._id.toString(),

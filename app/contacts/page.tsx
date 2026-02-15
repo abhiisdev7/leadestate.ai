@@ -49,13 +49,17 @@ function escapeCsvValue(val: string): string {
   return val;
 }
 
+function sourceLabel(source?: "inbound" | "outbound"): string {
+  return source === "inbound" ? "Buyer" : source === "outbound" ? "Seller" : "";
+}
+
 function contactsToCsv(contacts: Contact[]): string {
   const headers = ["Name", "Phone", "Email", "Source", "Added"];
   const rows = contacts.map((c) => [
     escapeCsvValue(c.name ?? ""),
     escapeCsvValue(c.phone ?? ""),
     escapeCsvValue(c.email ?? ""),
-    escapeCsvValue(c.source ?? ""),
+    escapeCsvValue(sourceLabel(c.source)),
     escapeCsvValue(c.createdAt ? formatDateTime(c.createdAt) : ""),
   ]);
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -195,7 +199,7 @@ export default function ContactsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Source</TableHead>
+                  <TableHead>Source (Buyer/Seller)</TableHead>
                   <TableHead>Added</TableHead>
                 </TableRow>
               </TableHeader>
@@ -217,8 +221,8 @@ export default function ContactsPage() {
                         {c.email ?? "—"}
                       </span>
                     </TableCell>
-                    <TableCell className="capitalize text-muted-foreground">
-                      {c.source ?? "—"}
+                    <TableCell className="text-muted-foreground">
+                      {c.source === "inbound" ? "Buyer" : c.source === "outbound" ? "Seller" : "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {c.createdAt ? formatDateTime(c.createdAt) : "—"}
