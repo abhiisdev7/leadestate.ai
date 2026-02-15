@@ -4,7 +4,8 @@ import { connectDB, Schedule } from "@/lib/db";
 import { classifyEmailIntent } from "@/lib/ai/classify-email-intent";
 import { handleCancelMeeting } from "./cancel-meeting-handler";
 
-const SCHEDULE_MESSAGE_ID_REGEX = /schedule-([a-f0-9]+)@leadestate\.local/i;
+// MongoDB ObjectId is 24 hex chars
+const SCHEDULE_MESSAGE_ID_REGEX = /schedule-([a-f0-9]{24})@leadestate\.local/i;
 
 function extractScheduleIdFromHeaders(
   inReplyTo: string | undefined,
@@ -27,11 +28,12 @@ function extractOurMessageId(
 export async function runEmailObserver(): Promise<{ processed: number; cancelled: number }> {
   const host = process.env.IMAP_MAIL_HOST ?? "imap.gmail.com";
   const port = Number(process.env.IMAP_EMAIL_PORT) || 993;
-  const user = process.env.IMAP_MAIL;
-  const pass = process.env.IMAP_MAIL_PASSWORD;
+  // Gmail uses same credentials for IMAP and SMTP
+  const user = process.env.IMAP_MAIL ?? process.env.SMTP_MAIL;
+  const pass = process.env.IMAP_MAIL_PASSWORD ?? process.env.SMTP_MAIL_PASSWORD;
 
   if (!user || !pass) {
-    console.warn("IMAP not configured, skipping email observer");
+    console.warn("IMAP not configured: set IMAP_MAIL/IMAP_MAIL_PASSWORD or SMTP_MAIL/SMTP_MAIL_PASSWORD");
     return { processed: 0, cancelled: 0 };
   }
 
@@ -93,10 +95,18 @@ export async function runEmailObserver(): Promise<{ processed: number; cancelled
             await connectDB();
             const schedule = await Schedule.findById(scheduleId)
               .populate("lead")
+              .populate("contact")
               .lean();
 
+            if (schedule?.status === "cancelled") {
+              await client.messageFlagsAdd(String(uid), ["\\Seen"], { uid: true });
+              continue;
+            }
+
             const lead = schedule?.lead as { name?: string; email?: string } | null;
-            const to = parsed.from?.value?.[0]?.address ?? lead?.email;
+            const contact = schedule?.contact as { email?: string } | null;
+            const to =
+              parsed.from?.value?.[0]?.address ?? lead?.email ?? contact?.email;
             if (!to) {
               console.warn(`No recipient for schedule ${scheduleId}, skipping reply`);
             } else {

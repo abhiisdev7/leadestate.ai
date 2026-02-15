@@ -34,7 +34,7 @@ export async function handleCancelMeeting(params: CancelMeetingParams): Promise<
       leadName,
       date,
       time,
-      inReplyTo: customerMessageId,
+      inReplyTo: customerMessageId || ourMessageId,
       references: [ourMessageId, customerMessageId].filter(Boolean),
       subject,
     });
@@ -45,19 +45,19 @@ export async function handleCancelMeeting(params: CancelMeetingParams): Promise<
 
   if (schedule.lead) {
     const lead = await Lead.findById(schedule.lead);
-    if (lead && lead.appointments?.length) {
-      const filteredAppointments = lead.appointments.filter(
-        (a) => !(a.date === date && a.time === time)
-      );
-      await Lead.findByIdAndUpdate(schedule.lead, {
-        $set: {
-          appointments: filteredAppointments,
-          next_action: "Meeting cancelled per customer request",
-        },
-      });
+    if (lead) {
+      const updates: Record<string, unknown> = {
+        next_action: "Meeting cancelled per customer request",
+      };
+      if (lead.appointments?.length) {
+        updates.appointments = lead.appointments.filter(
+          (a) => !(a.date === date && a.time === time)
+        );
+      }
       const memory = lead.memory ?? {};
       memory.notes = [...(memory.notes ?? []), `Meeting cancelled via email reply on ${date} at ${time}`];
-      await Lead.findByIdAndUpdate(schedule.lead, { $set: { memory } });
+      updates.memory = memory;
+      await Lead.findByIdAndUpdate(schedule.lead, { $set: updates });
     }
   }
 
@@ -66,7 +66,7 @@ export async function handleCancelMeeting(params: CancelMeetingParams): Promise<
     leadName,
     date,
     time,
-    inReplyTo: customerMessageId,
+    inReplyTo: customerMessageId || ourMessageId,
     references: [ourMessageId, customerMessageId].filter(Boolean),
     subject,
   });

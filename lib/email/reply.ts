@@ -61,7 +61,7 @@ export async function sendCancellationReply(
     to,
     subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
     html,
-    inReplyTo,
-    references: references.join(" "),
+    ...(inReplyTo && { inReplyTo }),
+    ...(references.length > 0 && { references: references.join(" ") }),
   });
 }
